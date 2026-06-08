@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Override global ~/.gitignore rules that block tracked test files.
+# Dheeraj's user-level gitignore has `test_*.py` which silently dropped
+# tests/test_models.py from PR #3 (caught during Phase 2 commit).
+# See ticket #1 Post-error revision comment for full incident notes.
+!tests/test_*.py
+
 # C extensions
 *.so
 
