@@ -96,6 +96,30 @@ class RankedVoicing(BaseModel):
     )
 
 
+class VersionInfo(BaseModel):
+    """A git-version stamp with a `clean` flag for dev-tree drift detection.
+
+    Matches the shape emitted by plugin shim CLI
+    [musescore4-chord-library-plugin#400](https://github.com/siege-analytics/musescore4-chord-library-plugin/issues/400)
+    after PR #406 landed it. The `clean` field catches the case where a
+    dev runs the shim against an uncommitted working tree — the SHA is
+    of the LAST commit, but the actual file content may differ. A
+    mismatched `clean` between shim output and Ellington output is the
+    diff harness's strong signal to abort comparison.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    sha: str = Field(description="Short git SHA (typically 7 hex chars) of the relevant commit.")
+    clean: bool = Field(
+        description=(
+            "True iff the working tree was clean (no uncommitted changes) for the "
+            "files this version stamps. False means the SHA is misleading — the "
+            "actual content may differ from the commit."
+        ),
+    )
+
+
 class EngineResponse(BaseModel):
     """Top-level output of `Engine.rank`. Mirrors shim #400's JSON shape."""
 
@@ -103,8 +127,15 @@ class EngineResponse(BaseModel):
 
     request: EngineRequest
     ranked_voicings: list[RankedVoicing]
-    engine_version: str = Field(description="Ellington-systems commit SHA at evaluation time.")
-    masters_version: str = Field(description="Vendored plugin SHA the masters corpus was loaded from.")
+    engine_version: VersionInfo = Field(
+        description="Version stamp for the engine implementation (plugin/model/ on the plugin side; src/ellington_systems/ here)."
+    )
+    masters_version: VersionInfo = Field(
+        description="Version stamp for masters.json the corpus was loaded from."
+    )
+    voicings_version: VersionInfo = Field(
+        description="Version stamp for voicings.json the corpus was loaded from."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +235,7 @@ __all__ = [
     "PayloadDelta",
     "RankedVoicing",
     "ScoreComponents",
+    "VersionInfo",
     "Voicing",
     "VoicingDot",
 ]

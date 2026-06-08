@@ -18,6 +18,7 @@ from ellington_systems.models import (
     PayloadDelta,
     RankedVoicing,
     ScoreComponents,
+    VersionInfo,
     Voicing,
     VoicingDot,
 )
@@ -140,8 +141,9 @@ class TestEngineResponseRoundTrip:
         resp = EngineResponse(
             request=req,
             ranked_voicings=[],
-            engine_version="1c277be",
-            masters_version="628ed30fbb03bbf015f167ce8962edef8c0e5273",
+            engine_version=VersionInfo(sha="1c277be", clean=True),
+            masters_version=VersionInfo(sha="628ed30", clean=True),
+            voicings_version=VersionInfo(sha="628ed30", clean=True),
         )
         assert resp.ranked_voicings == []
 
@@ -162,8 +164,9 @@ class TestEngineResponseRoundTrip:
                     applied_principles=["joe-pass/drop-2-and-drop-3-chord-melody"],
                 )
             ],
-            engine_version="abc1234",
-            masters_version="628ed30",
+            engine_version=VersionInfo(sha="abc1234", clean=True),
+            masters_version=VersionInfo(sha="628ed30", clean=True),
+            voicings_version=VersionInfo(sha="628ed30", clean=True),
         )
         encoded = resp.model_dump_json()
         decoded = EngineResponse.model_validate_json(encoded)

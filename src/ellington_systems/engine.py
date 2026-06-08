@@ -54,6 +54,7 @@ from .models import (
     PayloadDelta,
     RankedVoicing,
     ScoreComponents,
+    VersionInfo,
     Voicing,
 )
 from .scoring import ScoreBreakdown, ScoringOpts, score_candidate
@@ -150,8 +151,9 @@ class Engine:
         self,
         corpus: Corpus,
         registry: PayloadDispatcherRegistry,
-        engine_version: str,
-        masters_version: str,
+        engine_version: VersionInfo,
+        masters_version: VersionInfo,
+        voicings_version: VersionInfo,
     ) -> None:
         """Construct an engine bound to a corpus snapshot and registry.
 
@@ -160,16 +162,23 @@ class Engine:
                 ``Corpus.from_env``.
             registry: typically ``dispatcher.build_default_registry()``
                 for the spike's three-kind demo.
-            engine_version: Ellington commit SHA for this binding —
-                emitted in every ``EngineResponse`` so diff-time
-                version mismatch is detectable (Tiger 6 mitigation).
-            masters_version: plugin SHA the corpus was loaded from.
-                For the spike's frozen oracle, this is ``628ed30…``.
+            engine_version: ``VersionInfo`` for the Ellington binding
+                this engine implements. Emitted in every
+                ``EngineResponse`` so diff-time version mismatch is
+                detectable (Tiger 6 mitigation). The ``clean`` flag
+                catches dev-running-against-uncommitted-tree silently.
+            masters_version: ``VersionInfo`` for the masters.json the
+                corpus was loaded from. For the spike's frozen oracle,
+                ``sha`` should reference a commit at or before plugin
+                SHA ``628ed30…``.
+            voicings_version: ``VersionInfo`` for voicings.json the
+                corpus was loaded from. Matches the shim's emission.
         """
         self._corpus = corpus
         self._registry = registry
         self._engine_version = engine_version
         self._masters_version = masters_version
+        self._voicings_version = voicings_version
 
     def rank(self, request: EngineRequest) -> EngineResponse:
         """Compute the ranked-voicings response for one request.
@@ -276,6 +285,7 @@ class Engine:
             ranked_voicings=ranked,
             engine_version=self._engine_version,
             masters_version=self._masters_version,
+            voicings_version=self._voicings_version,
         )
 
 
