@@ -38,7 +38,7 @@ class TestEngineRequest:
         assert req.chord_symbol == "Cmaj7"
         assert len(req.tuning) == 6
         assert req.master_id is None
-        assert req.style_filter is None
+        assert req.category_filter is None
         assert req.context == {}
 
     def test_van_eps_seven_string_with_master(self) -> None:
@@ -106,6 +106,7 @@ class TestRankedVoicing:
     def test_minimal_ranked_voicing(self) -> None:
         rv = RankedVoicing(
             voicing_id="c13b9-cm6-altered-6str-26",
+            rank=1,
             score=147.5,
             score_components=ScoreComponents(base=147.5),
         )
@@ -116,6 +117,7 @@ class TestRankedVoicing:
     def test_ranked_voicing_with_payload_and_principles(self) -> None:
         rv = RankedVoicing(
             voicing_id="cmaj7-shell-6str-3",
+            rank=1,
             score=200.0,
             payload_kind="SubstitutionExpand",
             score_components=ScoreComponents(base=170.0, master_boost=30.0),
@@ -158,6 +160,7 @@ class TestEngineResponseRoundTrip:
             ranked_voicings=[
                 RankedVoicing(
                     voicing_id="cmaj7-shell-6str-3",
+                    rank=1,
                     score=200.0,
                     payload_kind="SubstitutionExpand",
                     score_components=ScoreComponents(base=170.0, master_boost=30.0),

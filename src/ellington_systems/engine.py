@@ -257,7 +257,10 @@ class Engine:
             )
 
         # Phase 4 — collapse + sort + emit
-        ranked: list[RankedVoicing] = []
+        # Sort tuples first so the rank assignment lines up with the final
+        # array order (RankedVoicing.rank is 1-indexed dense, matching the
+        # shim's contract).
+        scored_tuples: list[tuple[float, _PhaseOutput, ScoreComponents]] = []
         for o in outputs:
             score_components = ScoreComponents(
                 base=(
@@ -267,18 +270,26 @@ class Engine:
                 master_boost=o.breakdown.master_boost,
                 tolerance_match=o.phase3_score,
             )
-            total = score_components.base + score_components.master_boost + score_components.tolerance_match
-            ranked.append(
-                RankedVoicing(
-                    voicing_id=o.voicing.id,
-                    score=total,
-                    payload_kind=o.applied_kind,
-                    score_components=score_components,
-                    applied_principles=o.applied_principles,
-                )
+            total = (
+                score_components.base
+                + score_components.master_boost
+                + score_components.tolerance_match
             )
+            scored_tuples.append((total, o, score_components))
 
-        ranked.sort(key=lambda r: r.score, reverse=True)
+        scored_tuples.sort(key=lambda t: t[0], reverse=True)
+
+        ranked: list[RankedVoicing] = [
+            RankedVoicing(
+                voicing_id=o.voicing.id,
+                rank=index + 1,
+                score=total,
+                payload_kind=o.applied_kind,
+                score_components=score_components,
+                applied_principles=o.applied_principles,
+            )
+            for index, (total, o, score_components) in enumerate(scored_tuples)
+        ]
 
         return EngineResponse(
             request=request,

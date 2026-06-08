@@ -52,12 +52,13 @@ def _make_response(rows: list[tuple[str, float, float, float]]) -> EngineRespons
         ranked_voicings=[
             RankedVoicing(
                 voicing_id=vid,
+                rank=index + 1,
                 score=score,
                 score_components=ScoreComponents(
                     base=base, master_boost=boost, tolerance_match=0.0
                 ),
             )
-            for vid, score, base, boost in rows
+            for index, (vid, score, base, boost) in enumerate(rows)
         ],
         engine_version=_TEST_VERSION,
         masters_version=_TEST_VERSION,
@@ -182,6 +183,7 @@ class TestToleranceMatchExclusion:
             ranked_voicings=[
                 RankedVoicing(
                     voicing_id="a",
+                    rank=1,
                     score=100.0,
                     score_components=ScoreComponents(
                         base=100.0, master_boost=0.0, tolerance_match=0.0
@@ -197,6 +199,7 @@ class TestToleranceMatchExclusion:
             ranked_voicings=[
                 RankedVoicing(
                     voicing_id="a",
+                    rank=1,
                     score=115.0,  # different because of phase3 contribution
                     score_components=ScoreComponents(
                         base=100.0, master_boost=0.0, tolerance_match=15.0

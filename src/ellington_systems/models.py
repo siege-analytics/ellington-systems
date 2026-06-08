@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class EngineRequest(BaseModel):
@@ -27,22 +27,57 @@ class EngineRequest(BaseModel):
     chord_symbol: str = Field(
         description="Chord symbol such as 'Cmaj7', 'F#m7b5', 'G13b9'."
     )
-    tuning: list[str] = Field(
+    tuning: list[str] | str = Field(
         description=(
-            "Pitch list per string, low to high. Arbitrary length: 6-string "
-            "standard ['E2','A2','D3','G3','B3','E4'], 7-string Van Eps, "
-            "baritone, custom — engine discovers string count from len(tuning)."
+            "Two accepted shapes for cross-system compatibility:\n\n"
+            "1. **List form (Ellington-internal preferred)** — pitch list per "
+            "string, low to high, e.g. ``['E2','A2','D3','G3','B3','E4']``. "
+            "Supports arbitrary length: 7-string Van Eps, baritone, custom "
+            "tunings. The engine discovers string count from ``len(tuning)``.\n"
+            "2. **Compact-string form (shim echo / convenience)** — one "
+            "character per string in the standard MIDI-octave convention, "
+            "e.g. ``'EADGBE'``. Matches the plugin shim's ``--tuning`` flag "
+            "and the ``request.tuning`` field echoed in the shim's response. "
+            "Used by the oracle harness when round-tripping shim output "
+            "through ``EngineResponse``.\n\n"
+            "Engine code that actually processes a request always uses the "
+            "list form internally; callers should prefer it. The string form "
+            "is accepted strictly to make ``EngineResponse`` deserialization "
+            "from the shim work end-to-end."
         ),
-        min_length=4,
-        max_length=12,
     )
     master_id: str | None = Field(
         default=None,
         description="Master ID from masters.json (e.g. 'joe-pass'); None disables master_boost.",
     )
-    style_filter: str | None = Field(
+    @field_validator("tuning")
+    @classmethod
+    def _validate_tuning(cls, v: list[str] | str) -> list[str] | str:
+        """Enforce 4-12 string-count bounds on the list form.
+
+        The compact-string form has no per-string structure to validate
+        cheaply (we'd need to know which chars are notes vs accidentals),
+        so we accept it unconstrained — the engine's downstream code
+        falls over loudly if the count is wrong.
+        """
+        if isinstance(v, list):
+            if len(v) < 4 or len(v) > 12:
+                raise ValueError(
+                    f"tuning list length {len(v)} outside the allowed range "
+                    "4-12 (covers 4-string bass through 12-string guitar)"
+                )
+        return v
+
+    category_filter: str | None = Field(
         default=None,
-        description="Optional style profile name; None disables profile weighting.",
+        description=(
+            "Optional voicing.category filter (drop2 / shell / quartal / "
+            "extended / altered / drop3). None disables category pre-filtering. "
+            "Matches the plugin shim's `--category` flag and `category_filter` "
+            "JSON field — name corrected from `style_filter` per Post-error "
+            "revision on plugin #400. True voicingStyleTag pre-filter is "
+            "deferred to plugin #408 + a future Ellington field."
+        ),
     )
     context: dict[str, Any] = Field(
         default_factory=dict,
@@ -78,6 +113,14 @@ class RankedVoicing(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     voicing_id: str = Field(description="Stable ID from voicings.json — unique across the corpus.")
+    rank: int = Field(
+        ge=1,
+        description=(
+            "1-indexed dense position in the sorted ranked_voicings array. "
+            "Mirrors the plugin shim's `rank` field. Required by the diff "
+            "harness for ordering checks."
+        ),
+    )
     score: float
     payload_kind: str | None = Field(
         default=None,

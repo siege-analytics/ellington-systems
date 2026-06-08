@@ -111,7 +111,7 @@ def invoke_shim(
     master_id: str | None,
     *,
     n_strings: int = 6,
-    style_filter: str | None = None,
+    category_filter: str | None = None,
     position_preference: str | None = None,
     extra_args: list[str] | None = None,
 ) -> EngineResponse:
@@ -121,7 +121,7 @@ def invoke_shim(
         plugin_path: filesystem path to the plugin repo root (must
             contain ``scripts/engine_dump.js`` at or above the shim's
             landing commit).
-        chord_symbol, tuning, master_id, n_strings, style_filter,
+        chord_symbol, tuning, master_id, n_strings, category_filter,
         position_preference: forwarded to the shim's CLI.
         extra_args: optional pass-through for future shim flags.
 
@@ -152,8 +152,8 @@ def invoke_shim(
         argv.append("--no-master")
     else:
         argv.extend(["--master", master_id])
-    if style_filter is not None:
-        argv.extend(["--style", style_filter])
+    if category_filter is not None:
+        argv.extend(["--category", category_filter])
     if position_preference is not None:
         argv.extend(["--position-preference", position_preference])
     if extra_args:
@@ -306,7 +306,7 @@ def diff_against_shim(
         tuning="".join(_short_tuning_name(p) for p in request.tuning) if isinstance(request.tuning, list) else str(request.tuning),
         master_id=request.master_id,
         n_strings=request.context.get("n_strings", len(request.tuning)),
-        style_filter=request.style_filter,
+        category_filter=request.category_filter,
         position_preference=request.context.get("position_preference"),
     )
     ellington_response = engine.rank(request)
