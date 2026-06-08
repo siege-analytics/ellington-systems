@@ -21,8 +21,15 @@ from ellington_systems.models import (
     EnginePayload,
     EngineRequest,
     PayloadDelta,
+    VersionInfo,
     Voicing,
 )
+
+
+# Shared placeholders for the Engine constructor's three VersionInfo
+# parameters. Tests don't exercise version handling; they just need a
+# valid object to pass in.
+_TEST_VERSION = VersionInfo(sha="test", clean=True)
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +93,9 @@ class TestRankFiltersByStringCount:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -110,8 +118,9 @@ class TestRankFiltersByQuality:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -138,8 +147,9 @@ class TestRankFiltersByQuality:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cdom7",
@@ -164,8 +174,9 @@ class TestRankBaseScoring:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="ellington-test",
-            masters_version="plugin-test",
+            engine_version=VersionInfo(sha="ellington-test", clean=True),
+            masters_version=VersionInfo(sha="plugin-test", clean=True),
+            voicings_version=VersionInfo(sha="plugin-test", clean=True),
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -197,8 +208,9 @@ class TestRankWithMaster:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -226,8 +238,9 @@ class TestRankWithMaster:
         engine = Engine(
             corpus=corpus,
             registry=build_default_registry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -272,8 +285,9 @@ class TestRankWithMaster:
         engine = Engine(
             corpus=corpus,
             registry=build_default_registry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -309,8 +323,9 @@ class TestRankSortOrdering:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -336,8 +351,9 @@ class TestRankEmpty:
         engine = Engine(
             corpus=corpus,
             registry=PayloadDispatcherRegistry(),
-            engine_version="test",
-            masters_version="test",
+            engine_version=_TEST_VERSION,
+            masters_version=_TEST_VERSION,
+            voicings_version=_TEST_VERSION,
         )
         req = EngineRequest(
             chord_symbol="CnoSuchQuality",
@@ -346,8 +362,9 @@ class TestRankEmpty:
         resp = engine.rank(req)
         assert resp.ranked_voicings == []
         # Response still carries engine/masters versions for diff harness.
-        assert resp.engine_version == "test"
-        assert resp.masters_version == "test"
+        assert resp.engine_version == _TEST_VERSION
+        assert resp.masters_version == _TEST_VERSION
+        assert resp.voicings_version == _TEST_VERSION
 
 
 # ---------------------------------------------------------------------------
@@ -365,8 +382,9 @@ class TestLivePluginCorpus:
         engine = Engine(
             corpus=corpus,
             registry=build_default_registry(),
-            engine_version="ellington-spike",
-            masters_version="628ed30",
+            engine_version=VersionInfo(sha="ellington-spike", clean=True),
+            masters_version=VersionInfo(sha="628ed30", clean=True),
+            voicings_version=VersionInfo(sha="628ed30", clean=True),
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
@@ -380,8 +398,10 @@ class TestLivePluginCorpus:
         from ellington_systems.models import EngineResponse
 
         decoded = EngineResponse.model_validate_json(encoded)
-        assert decoded.engine_version == "ellington-spike"
-        assert decoded.masters_version == "628ed30"
+        assert decoded.engine_version.sha == "ellington-spike"
+        assert decoded.engine_version.clean is True
+        assert decoded.masters_version.sha == "628ed30"
+        assert decoded.voicings_version.sha == "628ed30"
 
     def test_rank_with_master_runs_phase_3(self, plugin_clone_path: str) -> None:
         """Pat Martino has `systems[]` per Fact Sheet — verify Phase 3
@@ -390,8 +410,9 @@ class TestLivePluginCorpus:
         engine = Engine(
             corpus=corpus,
             registry=build_default_registry(),
-            engine_version="ellington-spike",
-            masters_version="628ed30",
+            engine_version=VersionInfo(sha="ellington-spike", clean=True),
+            masters_version=VersionInfo(sha="628ed30", clean=True),
+            voicings_version=VersionInfo(sha="628ed30", clean=True),
         )
         req = EngineRequest(
             chord_symbol="Cmaj7",
