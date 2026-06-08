@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ellington-systems"
+version = "0.0.0"
+description = "Guitar practice + feedback platform engine. Derived from musescore4-chord-library-plugin."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Siege Analytics" }]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "pydantic>=2.6,<3",
+  "jsonschema>=4.21,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9",
+  "pytest-cov>=4.1,<6",
+]
+
+[project.urls]
+Homepage = "https://github.com/siege-analytics/ellington-systems"
+Issues = "https://github.com/siege-analytics/ellington-systems/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra -q"
+markers = [
+  "requires_shim: tests that need plugin shim CLI #400; skipped until shim is published.",
+  "requires_plugin: tests that read data from a live plugin clone via ELLINGTON_PLUGIN_PATH.",
+]
