@@ -61,39 +61,93 @@ from .scoring import ScoreBreakdown, ScoringOpts, score_candidate
 
 
 def _phase1_filter_candidates(
-    voicings: list[Voicing], chord_symbol: str, tuning: list[str]
+    voicings: list[Voicing],
+    chord_symbol: str,
+    *,
+    max_strings: int | None = None,
+    filter_category: str | None = None,
 ) -> list[Voicing]:
-    """Phase 1 stub — filter `voicings.json` entries by request shape.
+    """Phase 1 — port of the candidate-filter subset of
+    ``ChordSelector.findAllVoicings`` (``plugin/model/ChordSelector.js:379-413``).
 
-    Spike-grade filter:
+    Mirrors the JS line-by-line per the [Phase 1 alignment ticket #10](
+    https://github.com/siege-analytics/ellington-systems/issues/10) so the
+    oracle diff against shim CLI #400 can converge to ranking exact-match.
 
-    - String-count must match ``len(tuning)`` (rejects voicings whose
-      ``strings`` field doesn't fit the requested tuning).
-    - Chord quality matches either ``voicing.chord_quality`` OR any
-      entry in ``voicing.also_qualities`` (per design note Step 4 edge
-      case).
+    The JS function also does scoring + sorting after the filter; that work
+    lives in ``Engine.rank`` (Phase 2 + Phase 4) so this Python function
+    implements only the candidate-filter subset.
 
-    Root match is checked via ``parse_chord_symbol`` — voicings carry
-    their root as a separate ``root`` field, so any root works as long
-    as the quality matches. (The plugin transposes voicings on demand;
-    the spike doesn't do transposition — Phase 1's full geometry is
-    out of scope.)
+    Behaviour:
+
+    1. **Strings ceiling**: ``v.strings <= max_strings`` (default 7 per
+       JS ``opts.maxStrings || 7``).
+    2. **Root filter**: ``v.root == "C"`` (canonical "transpose me"
+       voicings) OR ``v.root == target_root`` (already-transposed).
+    3. **Admission**: ``v.chord_quality == quality`` OR
+       ``v.category == "quartal"`` (the quartal fallback inclusion).
+    4. **Category-filter gate** (when ``filter_category`` is set):
+       skip ``v`` IFF ``v.category != filter_category`` AND
+       ``v.chord_quality == quality``. Voicings admitted via the
+       quartal arm pass this gate regardless.
+    5. **Shape dedup**: build a key
+       ``f"{chord_quality}|{fret_number}|{string:fret,string:fret,...}"``
+       — note the trailing comma per JS line 398. First-occurrence
+       wins; later duplicates are silently dropped.
+    6. **Zero-match category fallback** (JS lines 405-413): if the
+       first pass yielded zero candidates AND ``filter_category`` was
+       set, run a second pass WITHOUT the category restriction. Dedup
+       is NOT applied on the second pass (the JS doesn't either).
+
+    Notable differences from the previous stub:
+
+    - **Drops ``also_qualities`` consultation.** The shim does not
+      consult ``v.also_qualities`` either, so this divergence is
+      removed in the alignment. Voicings whose ``chord_quality`` does
+      not exactly match the request — even if their ``also_qualities``
+      list contains the requested quality — are NOT admitted by Phase 1.
+    - **Drops ``filterContext`` + ``contextStringCounts``** support
+      that the JS (lines 382-385) uses to cap ``maxStrings`` further.
+      Ellington has no ``filter_context`` concept today; the branch is
+      inert in practice. Add when the concept lands.
     """
-    parsed_root, quality = parse_chord_symbol(chord_symbol)
-    n_strings = len(tuning)
+    target_root, quality = parse_chord_symbol(chord_symbol)
+    effective_max = max_strings if max_strings is not None else 7
 
-    out: list[Voicing] = []
+    candidates: list[Voicing] = []
+    seen_shapes: set[str] = set()
     for v in voicings:
-        if v.strings != n_strings:
+        if (v.strings or 6) > effective_max:
             continue
-        if v.chord_quality == quality or quality in (v.also_qualities or []):
-            # Root match: include any root — the dispatcher will weigh
-            # the actual root via Phase 2's master_boost / Phase 3
-            # evaluators. For the spike, we don't pre-filter by root
-            # because the plugin's `findBestVoicing` doesn't either —
-            # it transposes candidates as needed.
-            out.append(v)
-    return out
+        if v.root != "C" and v.root != target_root:
+            continue
+        if v.chord_quality == quality or v.category == "quartal":
+            if (
+                filter_category is not None
+                and v.category != filter_category
+                and v.chord_quality == quality
+            ):
+                continue
+            # Shape dedup key — JS line 398: trailing comma per dot.
+            dots_str = "".join(f"{d.string}:{d.fret}," for d in (v.dots or []))
+            shape_key = f"{v.chord_quality}|{v.fret_number or 0}|{dots_str}"
+            if shape_key in seen_shapes:
+                continue
+            seen_shapes.add(shape_key)
+            candidates.append(v)
+
+    # Zero-match category-fallback retry per JS lines 405-413.
+    if not candidates and filter_category is not None:
+        for v in voicings:
+            if v.chord_quality != quality and v.category != "quartal":
+                continue
+            if v.root != "C" and v.root != target_root:
+                continue
+            if (v.strings or 6) > effective_max:
+                continue
+            candidates.append(v)
+
+    return candidates
 
 
 def _walk_payloads(master: dict[str, Any]) -> list[tuple[str, EnginePayload]]:
@@ -206,9 +260,17 @@ class Engine:
                     f"check spelling against the plugin's masters.json)"
                 )
 
-        # Phase 1
+        # Phase 1 — strings filter uses len(tuning) as the upper bound.
+        # When request.tuning is the compact-string form ("EADGBE"), len()
+        # gives the same 6 the list-form would; for a custom tuning with
+        # multi-char pitches passed in list form, len() yields the string
+        # count directly. category_filter wires the JS engine's
+        # opts.filterCategory through to the filter.
         candidates = _phase1_filter_candidates(
-            self._corpus.voicings, request.chord_symbol, request.tuning
+            self._corpus.voicings,
+            request.chord_symbol,
+            max_strings=len(request.tuning),
+            filter_category=request.category_filter,
         )
 
         # Phase 3 prep — collect payloads once per request, not per candidate.
