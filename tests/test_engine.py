@@ -131,9 +131,12 @@ class TestRankFiltersByQuality:
         assert "maj7-vc" in ids
         assert "dom7-vc" not in ids
 
-    def test_also_qualities_match(self) -> None:
-        # A voicing whose primary quality is "13" but also_qualities ["dom7"]
-        # should be selected for a Cdom7 request.
+    def test_also_qualities_not_consulted_per_shim_contract(self) -> None:
+        # Per ticket #10's JS-aligned port: the shim's findAllVoicings
+        # does NOT consult v.also_qualities. A voicing whose primary
+        # quality is "13" with also_qualities ["dom7"] is NOT admitted
+        # for a Cdom7 request. This replaces the previous test which
+        # asserted the opposite (the pre-#10 stub behaviour).
         corpus = _build_synthetic_corpus(
             voicings_data=[
                 _basic_voicing(
@@ -157,7 +160,7 @@ class TestRankFiltersByQuality:
         )
         resp = engine.rank(req)
         ids = [r.voicing_id for r in resp.ranked_voicings]
-        assert ids == ["dual"]
+        assert ids == []
 
 
 # ---------------------------------------------------------------------------
