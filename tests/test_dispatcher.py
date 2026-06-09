@@ -46,7 +46,11 @@ class TestRegistryBasics:
         delta = reg.evaluate(EnginePayload(kind="UnknownKind"), _voicing(), {})
         assert delta.status == "inert"
         assert delta.score_delta == 0.0
-        assert delta.notes is not None and "no registered evaluator" in delta.notes
+        # Post-#412 partition: canonical-unknown gets a distinct notes tag
+        # so logs / oracle drill-down can tell "we should have ported this"
+        # apart from "_pending: was meant to be skipped" (see also the
+        # TestPendingKindRoundTripWithoutEvaluator suite below).
+        assert delta.notes is not None and "unregistered-canonical" in delta.notes
 
     def test_register_and_evaluate(self) -> None:
         reg = PayloadDispatcherRegistry()

@@ -43,10 +43,30 @@ states a payload kind can be in.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Protocol, runtime_checkable
 
 from .models import EnginePayload, PayloadDelta, Voicing
+
+
+_log = logging.getLogger(__name__)
+
+
+class EvaluatorNotRegistered(KeyError):
+    """Raised by `PayloadDispatcherRegistry` in `strict_mode=True` when a
+    canonical (non-``_pending:``) kind has no registered evaluator.
+
+    Production dispatch paths use ``strict_mode=False`` (default) and
+    silently soft-skip; tests / CI use ``strict_mode=True`` to catch
+    drift between the plugin's kind vocabulary and Ellington's port
+    coverage. Resolution from
+    `musescore4-chord-library-plugin#412`_ — see
+    `siege-analytics/ellington-systems#13`_ for the port queue.
+
+    .. _musescore4-chord-library-plugin#412: https://github.com/siege-analytics/musescore4-chord-library-plugin/issues/412
+    .. _siege-analytics/ellington-systems#13: https://github.com/siege-analytics/ellington-systems/issues/13
+    """
 
 
 @runtime_checkable
@@ -88,6 +108,12 @@ class PayloadDispatcherRegistry:
     """
 
     _evaluators: dict[str, PayloadEvaluator] = field(default_factory=dict)
+    strict_mode: bool = False
+    """When ``True``, unregistered canonical kinds raise
+    :class:`EvaluatorNotRegistered` instead of returning an inert
+    delta. ``_pending:*`` kinds always soft-skip regardless. Default
+    ``False`` is production-safe; tests / CI flip it.
+    """
 
     def register(self, kind: str, evaluator: PayloadEvaluator) -> None:
         """Register an evaluator for a given `engine_payload.kind`.
@@ -126,22 +152,46 @@ class PayloadDispatcherRegistry:
               the exception is captured in `notes`.
         """
         evaluator = self._evaluators.get(payload.kind)
-        if evaluator is None:
+        if evaluator is not None:
+            try:
+                return evaluator(payload, voicing, context)
+            except Exception as exc:  # noqa: BLE001 — design intent: catch any failure
+                return PayloadDelta(
+                    status="rejected",
+                    score_delta=0.0,
+                    applied_principle=None,
+                    notes=f"error:{payload.kind}:{exc!r}",
+                )
+        # Unknown kind. Branch by namespace per plugin#412 partition policy.
+        if payload.kind.startswith("_pending:"):
+            # `_pending:*` is plugin's explicit "no contract" namespace.
+            # Soft-skip in any mode; log at INFO so visibility is cheap.
+            _log.info(
+                "dispatcher: skipping _pending: kind %r (no contract — see plugin#412)",
+                payload.kind,
+            )
             return PayloadDelta(
                 status="inert",
                 score_delta=0.0,
                 applied_principle=None,
-                notes=f"no registered evaluator for kind={payload.kind!r}",
+                notes=f"_pending:{payload.kind}",
             )
-        try:
-            return evaluator(payload, voicing, context)
-        except Exception as exc:  # noqa: BLE001 — design intent: catch any failure
-            return PayloadDelta(
-                status="rejected",
-                score_delta=0.0,
-                applied_principle=None,
-                notes=f"error:{payload.kind}:{exc!r}",
-            )
+        # Canonical (non-`_pending:`) kind with no registered evaluator.
+        # strict_mode flips between production-safe (soft-skip + WARN) and
+        # CI-strict (raise so test runs catch drift).
+        if self.strict_mode:
+            raise EvaluatorNotRegistered(payload.kind)
+        _log.warning(
+            "dispatcher: unregistered canonical kind %r — no port yet "
+            "(see siege-analytics/ellington-systems#13)",
+            payload.kind,
+        )
+        return PayloadDelta(
+            status="inert",
+            score_delta=0.0,
+            applied_principle=None,
+            notes=f"unregistered-canonical:{payload.kind!r}",
+        )
 
     def evaluate_many(
         self,
