@@ -226,3 +226,5 @@ __marimo__/
 ellington.sqlite3
 data/corpus/*.jsonl
 data/corpus/*.json
+data/plugin-exports/*.jsonl
+data/plugin-exports/*.json

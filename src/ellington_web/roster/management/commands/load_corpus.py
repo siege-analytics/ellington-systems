@@ -69,6 +69,14 @@ class Command(BaseCommand):
             "--dry-run", action="store_true",
             help="Parse and validate but roll back the transaction.",
         )
+        parser.add_argument(
+            "--strict", action="store_true",
+            help=(
+                "Fail on notes referencing a master_slug absent from "
+                "masters.jsonl. Default: auto-create a stub Master row and "
+                "warn."
+            ),
+        )
 
     def handle(self, *args, **opts) -> None:
         corpus_dir: Path = opts["corpus_dir"]
@@ -85,7 +93,13 @@ class Command(BaseCommand):
         with transaction.atomic():
             n_buckets = self._load_buckets(index_path)
             n_masters, n_books = self._load_masters(masters_path)
-            n_notes = self._load_notes(notes_path)
+            n_notes, stubbed = self._load_notes(notes_path, strict=opts["strict"])
+            if stubbed:
+                self.stdout.write(self.style.WARNING(
+                    "Stubbed {n} master(s) not in masters.jsonl: {slugs}".format(
+                        n=len(stubbed), slugs=", ".join(sorted(stubbed))
+                    )
+                ))
             if opts["dry_run"]:
                 transaction.set_rollback(True)
                 self.stdout.write(self.style.WARNING("Dry run — rolled back."))
@@ -148,19 +162,29 @@ class Command(BaseCommand):
                 book_count += 1
         return master_count, book_count
 
-    def _load_notes(self, path: Path) -> int:
+    def _load_notes(
+        self, path: Path, *, strict: bool
+    ) -> tuple[int, set[str]]:
         count = 0
         book_note_counts: dict[str, int] = {}
+        stubbed: set[str] = set()
         for row in _iter_jsonl(path):
             master_slug = row["master_slug"]
             book_slug = row["book_slug"]
             try:
                 master = Master.objects.get(pk=master_slug)
             except Master.DoesNotExist as exc:
-                raise CommandError(
-                    f"Unknown master '{master_slug}' referenced by note "
-                    f"{row.get('note_id')}"
-                ) from exc
+                if strict:
+                    raise CommandError(
+                        f"Unknown master '{master_slug}' referenced by note "
+                        f"{row.get('note_id')}"
+                    ) from exc
+                master = Master.objects.create(
+                    slug=master_slug,
+                    display_name=master_slug.replace("-", " ").title(),
+                    bio_blurb="",
+                )
+                stubbed.add(master_slug)
             book, _ = Book.objects.get_or_create(
                 slug=book_slug,
                 defaults={
@@ -189,4 +213,14 @@ class Command(BaseCommand):
 
         for slug, n in book_note_counts.items():
             Book.objects.filter(pk=slug).update(note_count=n)
-        return count
+
+        for master_slug in stubbed:
+            m = Master.objects.get(pk=master_slug)
+            counts: dict[str, int] = {}
+            m.total_notes = m.usage_notes.count()
+            for level in m.usage_notes.values_list("granularity_level", flat=True):
+                if level:
+                    counts[level] = counts.get(level, 0) + 1
+            m.bucket_distribution = counts
+            m.save(update_fields=["total_notes", "bucket_distribution"])
+        return count, stubbed
