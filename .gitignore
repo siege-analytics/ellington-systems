@@ -222,3 +222,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.venv-web/
+ellington.sqlite3
+data/corpus/*.jsonl
+data/corpus/*.json

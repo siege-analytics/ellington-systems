@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Ellington{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    a { color: #1a5490; }
+    header { border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+    header nav a { margin-right: 1rem; }
+    h1 { margin-bottom: 0.25rem; }
+    .lived { color: #666; font-size: 0.95rem; }
+    table.distribution { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    table.distribution td, table.distribution th { padding: 0.35rem 0.5rem; text-align: left; border-bottom: 1px solid #eee; }
+    .bar { display: inline-block; height: 12px; background: #1a5490; vertical-align: middle; }
+    .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 3px; background: #eee; font-size: 0.85rem; }
+    .pending { color: #a04000; font-style: italic; }
+    ul.book-list { padding-left: 1.2rem; }
+    .verdict-form { border: 1px solid #ddd; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+<header>
+  <nav>
+    <a href="{% url 'roster:master_list' %}">Masters</a>
+  </nav>
+</header>
+{% block content %}{% endblock %}
+</body>
+</html>

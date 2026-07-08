@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load roster_extras %}
+{% block title %}{{ master.display_name }} — Ellington{% endblock %}
+{% block content %}
+  <h1>{{ master.display_name }}</h1>
+  {% if master.lived %}<p class="lived">{{ master.lived }}{% if master.instrument %} · {{ master.instrument }}{% endif %}</p>{% endif %}
+
+  {% if master.bio_blurb %}
+    <section>
+      <h2>Approach</h2>
+      <p>{{ master.bio_blurb|linebreaks }}</p>
+    </section>
+  {% endif %}
+
+  <section>
+    <h2>Quantitative model</h2>
+    {% if master.has_notes %}
+      <p>Distribution of {{ master.total_notes }} usage notes across the nine granularity buckets:</p>
+      <table class="distribution">
+        <thead>
+          <tr><th>Level</th><th>Bucket</th><th>Count</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for row in distribution_rows %}
+            <tr>
+              <td><strong>{{ row.level }}</strong></td>
+              <td>{{ row.name }}</td>
+              <td>{{ row.count }}</td>
+              <td>
+                {% bar_width_px row.count max_bucket_count as w %}
+                <span class="bar" style="width: {{ w }}px;"></span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="pending">Lessons pending — book(s) in corpus, s5 processing in progress.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Books</h2>
+    {% if books %}
+      <ul class="book-list">
+        {% for book in books %}
+          <li>{{ book.title }}{% if book.note_count %} <span class="badge">{{ book.note_count }} notes</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No books recorded.</p>
+    {% endif %}
+  </section>
+
+  {% if master.has_notes %}
+    <p><a href="{% url 'confirmations:review_master' master.slug %}">Review classifications →</a></p>
+  {% endif %}
+{% endblock %}
