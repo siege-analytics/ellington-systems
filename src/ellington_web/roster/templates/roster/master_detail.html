@@ -8,14 +8,14 @@
   {% if master.bio_blurb %}
     <section>
       <h2>Approach</h2>
-      <p>{{ master.bio_blurb|linebreaks }}</p>
+      {{ master.bio_blurb|linebreaks }}
     </section>
   {% endif %}
 
   <section>
     <h2>Quantitative model</h2>
     {% if master.has_notes %}
-      <p>Distribution of {{ master.total_notes }} usage notes across the nine granularity buckets:</p>
+      <p class="meta">Distribution of {{ master.total_notes }} usage notes across the nine granularity buckets.</p>
       <table class="distribution">
         <thead>
           <tr><th>Level</th><th>Bucket</th><th>Count</th><th></th></tr>
@@ -23,7 +23,7 @@
         <tbody>
           {% for row in distribution_rows %}
             <tr>
-              <td><strong>{{ row.level }}</strong></td>
+              <td>{{ row.level }}</td>
               <td>{{ row.name }}</td>
               <td>{{ row.count }}</td>
               <td>

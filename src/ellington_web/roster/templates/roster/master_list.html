@@ -2,15 +2,15 @@
 {% block title %}Masters — Ellington{% endblock %}
 {% block content %}
   <h1>Masters</h1>
-  <p>{{ masters|length }} masters in the corpus.</p>
-  <ul>
+  <p class="meta">{{ masters|length }} masters in the corpus.</p>
+  <ul class="master-list">
     {% for master in masters %}
       <li>
         <a href="{% url 'roster:master_detail' master.slug %}">{{ master.display_name }}</a>
         {% if master.has_notes %}
-          <span class="badge">{{ master.total_notes }} notes</span>
+          <span class="master-count">{{ master.total_notes }} notes</span>
         {% else %}
-          <span class="pending">Lessons pending</span>
+          <span class="master-count"><span class="badge pending">Lessons pending</span></span>
         {% endif %}
       </li>
     {% endfor %}
