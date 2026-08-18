@@ -12,3 +12,4 @@ urlpatterns = [
         name="review_note",
     ),
 ]
+

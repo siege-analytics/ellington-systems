@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from ellington_web.roster.models import GranularityBucket, Master, UsageNote
 
-from .forms import ConfirmationForm
-from .models import Confirmation, Pedagogue
+from .forms import ConfirmationForm, InviteRedemptionForm
+from .models import Confirmation, Pedagogue, PedagogueInvite
 
 
 def _pedagogue_for(request: HttpRequest) -> Pedagogue | None:
@@ -96,4 +99,71 @@ def _next_unreviewed(
         .filter(note_id__gt=after)
         .order_by("note_id")
         .first()
+    )
+
+
+def redeem_invite(request: HttpRequest, token: str) -> HttpResponse:
+    """Public view: accept a one-time invite token, create User+Pedagogue.
+
+    On success, log the new user in and redirect to the master roster so
+    they can start reviewing. On any error (bad token, expired, already
+    redeemed, form-invalid) render the same page with an explanation.
+    """
+    invite = PedagogueInvite.objects.filter(token=token).first()
+    if invite is None:
+        return render(
+            request, "confirmations/invite_error.html",
+            {"reason": "unknown"}, status=404,
+        )
+    if invite.is_redeemed:
+        return render(
+            request, "confirmations/invite_error.html",
+            {"reason": "redeemed", "invite": invite}, status=410,
+        )
+    if invite.is_expired:
+        return render(
+            request, "confirmations/invite_error.html",
+            {"reason": "expired", "invite": invite}, status=410,
+        )
+
+    if request.method == "POST":
+        form = InviteRedemptionForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                # Re-lock the invite row to make double-redemption a hard
+                # error under concurrent requests rather than silently
+                # binding two users to the same invite.
+                locked = PedagogueInvite.objects.select_for_update().get(
+                    pk=invite.pk
+                )
+                if locked.is_redeemed:
+                    messages.error(
+                        request, "This invite was just redeemed by another session."
+                    )
+                    return redirect("redeem_invite", token=token)
+                user = get_user_model().objects.create_user(
+                    username=form.cleaned_data["username"],
+                    email=invite.email,
+                    password=form.cleaned_data["password"],
+                )
+                pedagogue = Pedagogue.objects.create(
+                    user=user,
+                    display_name=invite.display_name,
+                    credentials=invite.credentials,
+                )
+                locked.redeemed_at = timezone.now()
+                locked.redeemed_pedagogue = pedagogue
+                locked.save(update_fields=["redeemed_at", "redeemed_pedagogue"])
+            login(request, user)
+            messages.success(
+                request,
+                f"Welcome, {pedagogue.display_name}. Pick a master to start reviewing.",
+            )
+            return redirect("roster:master_list")
+    else:
+        form = InviteRedemptionForm()
+
+    return render(
+        request, "confirmations/redeem_invite.html",
+        {"invite": invite, "form": form},
     )

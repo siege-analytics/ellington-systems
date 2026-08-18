@@ -73,7 +73,10 @@ DATABASES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -86,3 +89,13 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "/admin/login/"
+
+EMAIL_BACKEND = os.environ.get(
+    "ELLINGTON_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "ELLINGTON_DEFAULT_FROM_EMAIL", "no-reply@ellington.local"
+)
+ELLINGTON_PUBLIC_BASE_URL = os.environ.get(
+    "ELLINGTON_PUBLIC_BASE_URL", "http://localhost:8000"
+)
