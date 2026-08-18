@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Invite unavailable — Ellington{% endblock %}
+{% block content %}
+  <h1>This invite cannot be redeemed</h1>
+  {% if reason == "unknown" %}
+    <p>The link you followed does not match any active invitation. If a Siege Analytics teammate sent you this, ask them to reissue it.</p>
+  {% elif reason == "redeemed" %}
+    <p>This invitation was already redeemed on {{ invite.redeemed_at|date:"Y-m-d H:i" }} UTC. If that wasn't you, contact the person who invited you.</p>
+  {% elif reason == "expired" %}
+    <p>This invitation expired {{ invite.expires_at|date:"Y-m-d H:i" }} UTC. Ask the person who invited you to send a fresh link.</p>
+  {% else %}
+    <p>This invitation is not available.</p>
+  {% endif %}
+{% endblock %}

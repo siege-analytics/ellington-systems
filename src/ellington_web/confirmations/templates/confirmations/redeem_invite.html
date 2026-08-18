@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Redeem invite — Ellington{% endblock %}
+{% block content %}
+  <h1>Set up your pedagogue account</h1>
+  <p>You have been invited as <strong>{{ invite.display_name }}</strong> ({{ invite.email }}).</p>
+  <p>This invite expires {{ invite.expires_at|date:"Y-m-d H:i" }} UTC.</p>
+
+  <form method="post" class="verdict-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create account</button>
+  </form>
+{% endblock %}
