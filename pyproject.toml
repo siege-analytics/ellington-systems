@@ -26,6 +26,10 @@ dependencies = [
 dev = [
   "pytest>=8.0,<9",
   "pytest-cov>=4.1,<6",
+  "pytest-django>=4.8,<5",
+]
+web = [
+  "Django>=5.0,<6",
 ]
 
 [project.urls]
@@ -39,6 +43,7 @@ where = ["src"]
 minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-ra -q"
+DJANGO_SETTINGS_MODULE = "ellington_web.ellington_web.settings"
 markers = [
   "requires_shim: tests that need plugin shim CLI #400; skipped until shim is published.",
   "requires_plugin: tests that read data from a live plugin clone via ELLINGTON_PLUGIN_PATH.",

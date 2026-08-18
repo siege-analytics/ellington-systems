@@ -26,6 +26,31 @@ Tuning-agnostic from day one. 6-string standard, 7-string (Van Eps high-A or low
 - Branch naming: `feat/<issue>-<slug>`, `fix/<issue>-<slug>`, `docs/<issue>-<slug>`.
 - Every commit references its driving issue.
 
+## Web layer (roster + pedagogue confirmations)
+
+Ellington ships an optional Django app that renders master roster pages
+(bio, granularity-bucket distribution, book list) and hosts the pedagogue
+confirmation workflow over the s5 usage-note classifications.
+
+```bash
+pip install -e '.[web,dev]'
+python manage.py migrate
+python manage.py load_corpus data/corpus/
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+`load_corpus` expects three files (produced by the
+musescore4-chord-library-plugin pipeline):
+
+- `granularity_index.json`
+- `masters.jsonl`
+- `usage_notes.jsonl`
+
+Pedagogues review notes at `/confirm/<master-slug>/`. Only users with a
+linked `Pedagogue` profile (create one in the Django admin) may submit
+verdicts.
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).

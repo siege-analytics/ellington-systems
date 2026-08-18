@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Masters — Ellington{% endblock %}
+{% block content %}
+  <h1>Masters</h1>
+  <p>{{ masters|length }} masters in the corpus.</p>
+  <ul>
+    {% for master in masters %}
+      <li>
+        <a href="{% url 'roster:master_detail' master.slug %}">{{ master.display_name }}</a>
+        {% if master.has_notes %}
+          <span class="badge">{{ master.total_notes }} notes</span>
+        {% else %}
+          <span class="pending">Lessons pending</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
