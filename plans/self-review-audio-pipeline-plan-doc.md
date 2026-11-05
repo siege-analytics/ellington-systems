@@ -2,73 +2,86 @@
 
 Working as: software engineer, tech lead
 
-Covers one new file: `plans/audio-pipeline-plan.md`, a research + architecture plan for the Ellington audio pipeline (chart ingest → recording → separation → transcription → comparison → coaching). No executable code changes.
+Covers one new plan file, `plans/audio-pipeline-plan.md`, a research + architecture plan for the Ellington audio pipeline (chart ingest → recording → separation → transcription → comparison → coaching), plus this artifact. This revision follows an independent review of the first draft (head `491dcaea`) and reconciles the plan with epic ellington-systems#12 and ellington-web#60/#70/#71/#232/#243. No executable code changes.
 
 ## Assumptions
 
 Domain(s): software engineering
 Geospatial cross-cut: no
-Goal source: Dheeraj's pushback on 2026-07-08 flagging "test workflow for uploading tracks and parsing them" as a real gap — enumerated as follow-up in my four-priority reply, promoted to explicit ordering when Dheeraj said "pick and go" via saved feedback preference.
+Goal source: the owner's 2026-07-08 pushback flagging "test workflow for uploading tracks and parsing them" as a real gap, and the owner's later decision (relayed 2026-11-04) to revise this PR before merge after the review of the first draft.
 Plan reference: plans/audio-pipeline-plan.md (this artifact reviews *that* doc; there is no separate design note for a plan doc)
 Pre-author-inventory: NONE
-Trivial-against-state: Docs-only diff. `git diff develop..HEAD --stat` shows one new file, `plans/audio-pipeline-plan.md`, plus this artifact. No `.py`, `.sh`, `.js`, `.ts`, `.sql`, or executable file is touched.
+Trivial-against-state: Docs-only diff. The branch changes `plans/audio-pipeline-plan.md` and `plans/self-review-audio-pipeline-plan-doc.md` only. No `.py`, `.sh`, `.js`, `.ts`, `.sql`, or executable file is touched.
 Investigate-artifact: TRIVIAL
 Pre-mortem-artifact: TRIVIAL
 Hostile-review-artifact: WAIVED
-Project-contribution: Provides a concrete map of the audio side of Ellington so that when we start building it we're not making architectural decisions under deadline pressure. Enumerates six stages (chart ingest, recording, separation, transcription, comparison, coaching), names specific libraries (Basic Pitch, htdemucs, music21, PyGuitarPro, django-q2) with trade-offs, gives cost estimates at 1k-recordings/month volume (~$5-10/month marginal), sequences seven implementation slices with time estimates, and enumerates four genuinely-blocking decisions Dheeraj needs to make (deploy target, motor-rehab v1 vs v2, multi-track uploads, LLM coaching budget).
+Project-contribution: Provides a map of the audio side of Ellington reconciled with what is already recorded in epic #12 and the `ellington-web` issues, so that continued work does not duplicate or contradict it. Enumerates the six stages (chart ingest, recording, separation, transcription, comparison, coaching), states for each what is recorded versus open, corrects the description of `Engine.rank()` to match the code, and replaces the first draft's four "blocking questions" with the real blocking set (layout confirmation, chart schema, rehab scope, corpus availability) while keeping multi-track upload and LLM budget as deferrable. It records decisions already made with quotes and does not answer any open question.
 
 ## Trivial-investigation declaration
 
 Applies to both Investigate-artifact: TRIVIAL and Pre-mortem-artifact: TRIVIAL above.
 
 Category: Prose-only planning document. No code, no schema, no config, no infrastructure.
-Cannot produce error: Because a markdown file under `plans/` is not loaded by any code path in the repo. `grep -rn "audio-pipeline-plan" src/ tests/` returns zero matches. The file exists only for human consumption.
-Evidence: `git diff develop..HEAD --stat` shows `plans/audio-pipeline-plan.md` and `plans/self-review-audio-pipeline-plan-doc.md` as the only changes. `python -m pytest` still passes 215 tests + 9 skips against the branch — same as develop.
-Falsification: Would be falsified if adding a markdown file to `plans/` broke something. Sanity check: `pytest` passes.
+Cannot produce error: Because a markdown file under `plans/` is not loaded by any code path in the repo. `grep -rn "audio-pipeline-plan" src tests` over the extracted head returns zero matches.
+Evidence: the test suite was run at the pre-revision head `491dcaea` (the revision changes only the two `plans/` files): `207 passed, 9 skipped` (interpreter `~/.pyenv/versions/default_31111/bin/python` 3.11.11, pytest 8.4.2; command `python -m pytest -p no:cacheprovider -o pythonpath=src -o addopts= -rs` from the extracted tarball). All 9 skips are `ELLINGTON_PLUGIN_PATH not set; skipping plugin-data test`. The first draft's "215 passed, 9 skipped" was wrong for the committed tree: two test files (`tests/webapp/test_roster_views.py`, 3 tests, and `tests/webapp/test_confirmation_flow.py`, 5 tests) exist only in the author's local clone and are not in git, which accounts for the 8 missing tests. A ticket for that is being filed and has no number yet. The suite was not re-run after this revision because no file the suite loads was changed.
+Falsification: Would be falsified if adding or editing a markdown file under `plans/` changed the suite result. Not re-run; the claim rests on the grep above.
 
 ## Peer review (Junior's checklist -- mechanics, correctness, craft floor)
 
-Shelves engaged: writing-prose:1 (claims grounded in specific tools / prices / model names, not vibes), writing-claims:2 (cost estimates cite actual per-inference rates, sequencing cites specific slice sizes), writing-claims:3 (model choices name specific alternatives with trade-offs).
+Shelves engaged: writing-prose:1 (claims grounded in specific tools / prices / model names, not vibes), writing-claims:2 (countable claims verified), writing-claims:3 (unquantified claims grounded or marked UNVERIFIED).
 
 **writing-prose:1 — Grounded claims.** Checked.
-- Every model recommendation names the specific library (Basic Pitch, htdemucs, music21, PyGuitarPro, django-q2) and the specific trade-off that led to picking it.
-- Cost estimates use concrete per-inference rates from published Replicate pricing (2026 rates for demucs / basic-pitch models) rather than "cheap" / "not too much."
-- Sequencing gives per-slice time estimates (2-3 days, 1 week, etc.) that reflect actual scope of the described work.
-- Each stage has a "Falsifiable premise" section naming what evidence would invalidate the recommendation.
+- Each recorded decision is quoted with its issue number or document; each is labelled "recorded" with the owner's ratification UNVERIFIED, because the quoted comments are posted under the owner's account but the threads do not show the owner's own answer.
+- Open questions are restated precisely and are not answered.
 
 **writing-claims:2 — Countable claims verified.** Checked.
-- "215 tests still pass" verified: `python -m pytest 2>&1 | tail -3` shows `215 passed, 9 skipped`.
-- "Zero new files touched outside `plans/`" verified: `git diff develop..HEAD --stat` shows only two `plans/` files.
-- Cost totals ($5-10/month at 1k recordings) computed inline in the doc — reader can check the arithmetic.
+- Test count: 207 passed, 9 skipped, measured (see declaration above); the first draft's 215 is corrected.
+- Code references re-checked by grep against the extracted head `491dcaea`: `Engine.rank(self, request: EngineRequest)` at `src/ellington_systems/engine.py:237`; `melody_target=-1`, `bass_target=-1`, `ref=None` at `engine.py:288-290`; `EngineRequest` at `models.py:22`, `RankedVoicing` at `models.py:110`, `Voicing` at `models.py:234` with `dots` (253) and `fingering` (271); `Corpus.from_plugin_clone` at `corpus.py:54` and `from_env` at `corpus.py:102`.
+- Issue and PR references re-checked with `gh`: ellington-systems#12 exists (EPIC: Ellington web application on the GeoDjango Simple Template); ellington-systems PRs #17, #18, #19 exist; ellington-web PRs #74, #234, #242, #245, #247, #249, #251, #253, #254 exist with titles matching how the plan describes them; plugin PR #403 is MERGED (2026-06-08) and PR #595 is MERGED (2026-06-25). Issues #4, #5, #57, #60, #70, #71, #86, #232, #243 in ellington-web were fetched with bodies and comments before quoting; the long bodies and comments of #57 and #243 were truncated at 2,000-4,500 characters in the fetch, so quotes from them come only from the portions read.
+- File paths re-checked with `gh api`: `ellington-web/app/ellington_web/ingest/charts_common/normalize.py`, `.../ingest/irealpro/parser.py`, `.../apps/styles/comparator.py` exist; `.../apps/engine_rules/` contains `firing.py`, `slicer.py`, `alignment.py`; `docker/requirements.txt` contains `celery[redis]` and `pyRealParser==0.1.0`.
+- Package claims re-checked against the PyPI JSON endpoint on 2026-11-04: `pyRealParser`, `PyGuitarPro`, `basic-pitch`, `demucs`, `django-q2` exist (HTTP 200); `python-ireal-pro`, `libbb`, `guitarpro` returned HTTP 404 and are described in the plan as not found / UNVERIFIED. The merge state of the ellington-web PRs listed was not checked and is marked UNVERIFIED in the plan where it matters.
 
 **writing-claims:3 — Unquantified claims grounded.** Checked.
-- "htdemucs is current best-in-class for source separation" — grounded in the public MDX challenge leaderboards; not asserted without a reference model to check against.
-- "Basic Pitch is production-ready" — grounded in Spotify's public deployment and the MIT license, not vibes.
-- "Django admin is a staff tool, not pedagogue-facing" — grounded in the previous PR's model where only staff can create Pedagogue accounts.
+- The first draft's "htdemucs is current best-in-class", "Basic Pitch is production-ready", and the cost rates cited no source in the plan. The plan now states the cost figures are unsourced assumptions and removes the unsourced superlatives; model choices are described through the recorded issues instead.
+- The first draft's time estimates are withdrawn as ungrounded.
+- A line in the first draft's self-review about "Django admin is a staff tool" did not describe this PR (it came from a different change's review) and is removed.
 
 ## Lead review (Lead's adversarial pass -- did the Junior actually solve this?)
 
 **software engineering domain:**
 
-- *Approach fit:* A plan doc, not a spike, is the right first artifact for a multi-week body of work. The alternative (start coding immediately) would repeat the "engine spike" pattern — fine for a bounded feasibility test, wrong for a pipeline with six independent stages that each need library selection.
-- *Affirmative standard: the doc gives Dheeraj enough to decide "go / no-go / different direction."* Holds. The four blocking decisions are named explicitly and separated from the rest. If Dheeraj answers those four, the rest is proceed-with-defaults.
-- *Affirmative standard: the doc does NOT commit us to code that would need to be undone.* Holds. Zero code changes. Every recommendation is qualified as "recommendation" or "current best guess" with a falsifiability clause.
+- *Approach fit:* A plan doc is still the right artifact for a multi-week body of work, but only if it agrees with the recorded work. The first draft did not; the reconciliation in this revision is the substantive change. Where the sources disagree with each other (for example separation sequencing in #60 versus #232, or LLM runtime in #5 versus PLAN.md), the plan shows both and does not pick.
+- *Affirmative standard: the doc gives the owner enough to decide "go / no-go / different direction."* Holds only for the listed open questions; the plan makes no decision on the owner's behalf.
+- *Affirmative standard: the doc does NOT commit us to code that would need to be undone.* Holds. Zero code changes. Where the plan proposes something (a voicing-rank comparison as possible v2 evidence) it is labelled a proposal.
 
 **tech lead domain:**
 
-- *Approach fit:* Sequencing (steps 1-4 to end-to-end demo in ~3 weeks; steps 5-7 as enhancements) is a defensible chunking. Each slice has independent value.
-- *Sequencing assumption:* Plan doc after web-layer PRs, not before, was the right order because the web layer was mostly built already (roster + confirmations + invite + design) and shipping those made pedagogue outreach possible in parallel with audio-pipeline planning.
+- *Approach fit:* The sequencing table now maps first-draft slices onto existing issues and PRs instead of presenting a fresh schedule.
+- *Residual risk:* Recorded decisions are quoted from issues whose authorship cannot be confirmed from GitHub alone. The plan marks this; the owner is the only one who can ratify.
 
 **Dismissals from peer review:**
-- "No benchmark data on Basic Pitch guitar accuracy in the doc." — dismissed. The plan doc explicitly lists a prototype benchmark as a follow-up artifact needed *before* implementing step 2. Doing the benchmark inside the plan doc would be over-scoped for a research document.
+- "No benchmark data on pitch-engine guitar accuracy in the doc." — dismissed. The plan lists a prototype benchmark as a follow-up artifact; doing it inside a plan doc would be over-scoped.
+
+## Verification performed on this revision
+
+- Every issue number, PR number, file path and package name added or changed in `plans/audio-pipeline-plan.md` was checked in the same work cycle as listed under writing-claims:2.
+- Markdown tables were re-read for broken cells (literal pipes inside quoted text are escaped).
+- The revised files were diffed against the versions at head `491dcaea`; the diff touches only these two files.
+- Added propagation-deferred frontmatter to satisfy the ticket-propagation guard (claude-configs-public#251); no comments were posted on the cited issues.
+- Not done: no tests were run after the revision (docs-only); merge state of the cited ellington-web PRs was not verified; the sources behind the quoted "recorded" decisions were not re-read after the quoting pass beyond the issue fetches done for this revision.
 
 ## Findings
 
 | ID | Priority | Description | Resolution |
 |----|----------|-------------|------------|
-| F12 | P3 | Cost estimates use 2026 Replicate rates. They will drift. | Reader-obvious; the doc says "order of magnitude" not "commit." |
-| F13 | P2 | Four decisions genuinely block Dheeraj to answer. This is the point of the doc, but if he doesn't answer, we stall. | By-design. The saved `feedback_pick_and_execute.md` rule doesn't apply here — these are aesthetic / budget / scope decisions I cannot infer. |
+| F1 | P2 | First draft claimed `python-ireal-pro`, `libbb`, and a Rust `guitarpro` package without verification. | Checked against PyPI on 2026-11-04: those names return 404 and are now marked not found / UNVERIFIED; the package actually used (`pyRealParser`) is named. |
+| F2 | P3 | Cost estimates cite no source; also, under the recorded layout (owned GPU nodes, local LLM) a pay-per-inference model may not apply. | Marked as unsourced assumptions (UNVERIFIED) in the plan. |
+| F3 | P3 | First draft's findings table started at F12 with no F1-F11. | Renumbered F1 onward. |
+| F4 | P2 | First draft's self-review ended with an authorship attribution line. | Removed. |
+| F5 | P2 | Plan did not relate the audio app to the existing `ellington_web` Django app in this repo. | Plan now states the layout is open pending confirmation and that this repo's web layer is the pedagogue layer, not the audio app. |
+| F6 | P3 | Branch is one commit behind `develop` (PR #19). | Not addressed here by instruction; no sync was done. |
+| F7 | P3 | No driving issue named. | Plan header names ellington-systems#12 (sub-epic 2). |
+| F8 | P2 | Two test files exist only in a local clone. | Out of scope of this PR; ticket being filed, no number yet. |
+| F9 | P1 | First draft conflicted with recorded work (chart schema, queue, deploy, comparator, LLM runtime). | Reconciled in the plan; items that remain genuinely open are listed under "Decisions". |
 
-Zero P1 findings.
-
-Self-Review author: Craft Agent (session `260708-copper-coyote`)
+No P1 findings remain open in this artifact. Remaining open items are decisions for the owner, listed in the plan.
