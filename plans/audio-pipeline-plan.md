@@ -58,7 +58,7 @@ Where the audio code lives is **recorded but not yet confirmed** (see "Decisions
 |---|---|---|
 | iReal Pro | `.html` or `.txt` payload; iRealPro URL scheme | Implemented in `ellington-web`: ellington-web#232 says "`ingest/irealpro/parser.py` + `ingest/irealpro/importer.py` ... `pyRealParser` is in `docker/requirements.txt`." (`pyRealParser` exists on PyPI, checked 2026-11-04; the first draft's "`python-ireal-pro`" is not a PyPI package name I could find, HTTP 404.) |
 | Band-in-a-Box | `.SGU`, `.MGU`, `.SG*` | Proprietary binary. ellington-web#232: ".SGU / .MGU are proprietary binary formats with no documented Python parser. Realistic path: users export from BIAB to MusicXML or MIDI before upload." (The first draft's "`libbb`" is not a PyPI package name I could find, HTTP 404; UNVERIFIED elsewhere.) |
-| MuseScore | `.mscz` (ZIP-compressed MuseScore `.mscx`; compressed MusicXML is a different format, `.mxl`; MuseScore handbook, checked 2026-11-06) | Shipped: ellington-web#70 says "Phase 4-MS shipped on develop in PR #74 / commit 963107b". |
+| MuseScore | `.mscz` (ZIP-compressed MuseScore `.mscx`; compressed MusicXML is a different format, `.mxl`; MuseScore 3 handbook, https://musescore.org/en/handbook/3/file-formats, checked 2026-11-06; this is the MuseScore 3 handbook and the plan does not claim it covers MuseScore 4) | Shipped: ellington-web#70 says "Phase 4-MS shipped on develop in PR #74 / commit 963107b". |
 | GuitarPro | `.gp`, `.gpx`, `.gp3-.gp7` | `PyGuitarPro` exists on PyPI (checked 2026-11-04). The first draft's claim of a Rust-binding package named `guitarpro` for `.gpx`/`.gp7` is UNVERIFIED (no PyPI package of that name, HTTP 404). Whether GuitarPro ingest is planned in `ellington-web` is UNVERIFIED (I did not find an issue). |
 | Scanned PDF | `.pdf` | Not in the first draft. ellington-web#70 integrates `omr-leadsheet` as the fourth ingest format; its Q3 decision is recorded as "Multi-page (album) from v1, not single-PDF." |
 
@@ -211,6 +211,6 @@ Everything else in this document is either recorded above or has a default that 
 - Per-stage design notes (comparison-diff schema if a voicing-rank comparison is built; any audio-specific models not already in `ellington-web`), one per implementation slice
 - Per-stage hostile-review artifacts and pre-mortems, one per implementation slice
 - A prototype benchmark of the chosen pitch engine on 20 real guitar recordings, needed before committing to it beyond v1
-- A ticket for two test files that exist only in a local clone of this repo (`tests/webapp/test_roster_views.py` and `tests/webapp/test_confirmation_flow.py`, 8 tests); the ticket is being filed and has no number yet
+- A ticket for two test files that exist only in a local clone of this repo (`tests/webapp/test_roster_views.py` and `tests/webapp/test_confirmation_flow.py`, 8 tests); tracked in [ellington-systems#21](https://github.com/siege-analytics/ellington-systems/issues/21)
 
 These are enumerated so that when implementation starts, the discipline artifacts are pre-scoped rather than invented under time pressure.
